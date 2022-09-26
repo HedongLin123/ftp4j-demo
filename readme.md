@@ -1,4 +1,4 @@
-# Springboot整合FTP(S)/SFTP实现文件上传下载
+# Java实现FTP(S)/SFTP实现文件上传下载
 
 很多时候我们会遇到从FTP上上传和下载文件，但是FTP分为了三种主要实现，分别是FTP，FTPS，SFTP。我们封装一个一套工具类来实现它的连接，上传下载的等功能。
 
@@ -61,11 +61,11 @@ ftp4j下载地址：http://www.sauronsoftware.it/projects/ftp4j/download.php
 
 下载后的源码拷贝到您的项目，结构如下：
 
-<img src="img/1、ftp4j下载源码.png" alt="下载ftp4j">
+![下载ftp4j](img/1、ftp4j下载源码.png)
 
 因为我们采用直接拷贝源码方式集成到项目，所以如同如下结构：
 
-<img src="img/2、ftp4j复制到项目.png" alt="集成ftp4j">
+![集成ftp4j](img/2、ftp4j复制到项目.png)
 
 # 3、工具类实现
 
