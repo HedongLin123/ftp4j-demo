@@ -1,4 +1,4 @@
-package com.itdl.enums;
+package com.saxo.ftp.enums;
 
 public enum FtpTypeEnum {
 

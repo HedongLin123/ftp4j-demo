@@ -1,17 +1,21 @@
-package com.itdl;
+package com.saxo.ftp.core.helper;
 
-import com.itdl.exception.FtpException;
-import com.jcraft.jsch.*;
+import com.saxo.ftp.exception.FtpException;
+import it.sauronsoftware.ftp4j.FTPClient;
 import org.apache.commons.lang3.StringUtils;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.*;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 
 /**
- * SFTP 工具类
+ * Ftps 工具类
  */
-public class SftpHelper extends BaseFtpHelper<ChannelSftp>{
+public class FtpsHelper extends BaseFtpHelper<FTPClient>{
     /**
      * 初始化Ftp信息
      *
@@ -20,63 +24,62 @@ public class SftpHelper extends BaseFtpHelper<ChannelSftp>{
      * @param ftpUsername ftp 用户名
      * @param ftpPassword ftp 密码
      */
-    public SftpHelper(String ftpServer, int ftpPort, String ftpUsername,
+    public FtpsHelper(String ftpServer, int ftpPort, String ftpUsername,
                       String ftpPassword) {
         super(ftpServer, ftpPort, ftpUsername, ftpPassword);
     }
 
     /**
      * 连接到ftp
-     *
      * @param ftpServer   ftp服务器地址
      * @param ftpPort     Ftp端口号
      * @param ftpUsername ftp 用户名
      * @param ftpPassword ftp 密码
      */
     public void connect(String ftpServer, int ftpPort, String ftpUsername, String ftpPassword) {
-        ftp = new ChannelSftp();
+        ftp = new FTPClient();
         try {
-            JSch jsch = new JSch();
-            // 获取session
-            Session session = jsch.getSession(ftpUsername, ftpServer, ftpPort);
-            // 设置密码
-            if (!StringUtils.isEmpty(ftpPassword)){
-                session.setPassword(ftpPassword);
-            }
-            Properties properties = new Properties();
-            properties.put("StrictHostKeyChecking", "no");
-            session.setConfig(properties);
-            // 使用会话开启连接
-            if (!session.isConnected()){
-                session.connect(30000);
-            }
-            Channel channel = session.openChannel("sftp");
-            if (!channel.isConnected()){
-                channel.connect(30000);
-            }
-            ftp = (ChannelSftp) channel;
+            TrustManager[] trustManager = new TrustManager[]{new X509TrustManager() {
+                public X509Certificate[] getAcceptedIssuers() {
+                    return null;
+                }
+                public void checkClientTrusted(X509Certificate[] certs,
+                                               String authType) {
+                }
+                public void checkServerTrusted(X509Certificate[] certs,
+                                               String authType) {
+                }
+            }};
+            SSLContext sslContext = null;
+            sslContext = SSLContext.getInstance("SSL");
+            sslContext.init(null, trustManager, new SecureRandom());
+            SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
+            ftp.setSSLSocketFactory(sslSocketFactory);
+            ftp.setSecurity(FTPClient.SECURITY_FTPES);
+            ftp.connect(ftpServer, ftpPort);
+            ftp.login(ftpUsername, ftpPassword);
+            ftp.setCharset("UTF-8");
             // 记录根目录
-            this.rootPath = ftp.pwd();
+            this.rootPath = ftp.currentDirectory();
+            System.out.println(this.rootPath);
         }
         catch (Exception e) {
-            ftp = null;
+            ftp =  null;
             throw new FtpException(e.getMessage(), e.getCause());
         }
     }
 
     /**
      * 更改ftp路径
-     *
      * @param dirName
      * @return
      */
     public boolean checkDirectory(String dirName) {
         boolean flag;
         try {
-            ftp.cd(dirName);
+            ftp.changeDirectory(dirName);
             flag = true;
         } catch (Exception e) {
-            e.printStackTrace();
             flag = false;
         }
         return flag;
@@ -96,9 +99,7 @@ public class SftpHelper extends BaseFtpHelper<ChannelSftp>{
         // 查询目录下面有什么
         String[] dirs = new String[]{};
         try {
-            final Vector<ChannelSftp.LsEntry> result = (Vector<ChannelSftp.LsEntry>) ftp.ls(dir);
-            // 转换为string数组
-            return result.stream().map(ChannelSftp.LsEntry::getFilename).collect(Collectors.toList()).toArray(new String[]{});
+            dirs = ftp.listNames();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -112,9 +113,7 @@ public class SftpHelper extends BaseFtpHelper<ChannelSftp>{
     public void disconnect() {
         try {
             if (ftp.isConnected()) {
-                ftp.getSession().disconnect();
-                ftp.disconnect();
-                ftp.quit();
+                ftp.disconnect(true);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -128,8 +127,8 @@ public class SftpHelper extends BaseFtpHelper<ChannelSftp>{
      * @return s
      * @throws Exception
      */
-    public OutputStream downloadFile(String filePath) throws Exception {
-        InputStream inputStream = null;
+    public ByteArrayOutputStream downloadFile(String filePath) throws Exception {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         String fileName = "";
         filePath = StringUtils.removeStart(filePath, "/");
         int len = filePath.lastIndexOf("/");
@@ -144,30 +143,23 @@ public class SftpHelper extends BaseFtpHelper<ChannelSftp>{
             String type = filePath.substring(0, len);
             String rootStart = rootPath;
             rootStart = StringUtils.removeStart(rootStart, "/");
-            if (type.startsWith(rootStart) && !rootPath.equals("/")){
+            if (type.startsWith(rootStart)){
                 type = type.substring(rootStart.length() + 1);
             }
             String[] typeArray = type.split("/");
             // 先切换到根目录，预防出错
-            ftp.cd(rootPath);
+            ftp.changeDirectory(rootPath);
             for (String s : typeArray) {
-                ftp.cd(s);
+                ftp.changeDirectory(s);
             }
         }
         try {
-            final String pwd = ftp.pwd();
-            inputStream = ftp.get(fileName);
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();//输出流
-            byte[] bytes = new byte[1024];
-            int outlen;
-            while ((outlen = inputStream.read(bytes)) != -1) {
-                outputStream.write(bytes, 0, outlen); //将读到的字节写入输出流
-            }
-            return outputStream;
+            final String pwd = ftp.currentDirectory();
+            ftp.download(fileName, outputStream, 0, null);
         } catch (Exception e) {
             e.printStackTrace();
-            throw new RuntimeException("download file fail");
         }
+        return outputStream;
     }
 
     /**
@@ -206,14 +198,21 @@ public class SftpHelper extends BaseFtpHelper<ChannelSftp>{
         } else {
             fileName = filePath.substring(len + 1);
             String type = filePath.substring(0, len);
+            String rootStart = rootPath;
+            rootStart = StringUtils.removeStart(rootStart, "/");
+            if (type.startsWith(rootStart)){
+                type = type.substring(rootStart.length() + 1);
+            }
             String[] typeArray = type.split("/");
+            // 先切换到根目录，预防出错
+            ftp.changeDirectory(rootPath);
             for (String s : typeArray) {
                 if (!checkDirectory(s)) {
-                    ftp.mkdir(s);
+                    ftp.createDirectory(s);
                 }
             }
         }
-        ftp.put(inStream, fileName);
+        ftp.upload(fileName, inStream, 0, 0, null);
     }
 
     /**
@@ -239,11 +238,11 @@ public class SftpHelper extends BaseFtpHelper<ChannelSftp>{
             String[] typeArray = type.split("/");
             for (String s : typeArray) {
                 if (checkDirectory(s)) {
-                    ftp.cd(s);
+                    ftp.changeDirectory(s);
                 }
             }
         }
-        ftp.rm(fileName);
+        ftp.deleteFile(fileName);
     }
 
     /**
@@ -255,7 +254,7 @@ public class SftpHelper extends BaseFtpHelper<ChannelSftp>{
     public void changeDirectory(String path) {
         if (!StringUtils.isEmpty(path)) {
             try {
-                ftp.cd(path);
+                ftp.changeDirectory(path);
             } catch (Exception e) {
                 e.printStackTrace();
             }

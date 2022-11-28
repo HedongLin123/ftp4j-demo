@@ -1,21 +1,15 @@
-package com.itdl;
+package com.saxo.ftp.core.helper;
 
-import com.itdl.exception.FtpException;
+import com.saxo.ftp.exception.FtpException;
 import it.sauronsoftware.ftp4j.FTPClient;
 import org.apache.commons.lang3.StringUtils;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 import java.io.*;
-import java.security.SecureRandom;
-import java.security.cert.X509Certificate;
 
 /**
- * Ftps 工具类
+ * Ftp 工具类
  */
-public class FtpsHelper extends BaseFtpHelper<FTPClient>{
+public class FtpHelper extends BaseFtpHelper<FTPClient>{
     /**
      * 初始化Ftp信息
      *
@@ -24,8 +18,8 @@ public class FtpsHelper extends BaseFtpHelper<FTPClient>{
      * @param ftpUsername ftp 用户名
      * @param ftpPassword ftp 密码
      */
-    public FtpsHelper(String ftpServer, int ftpPort, String ftpUsername,
-                      String ftpPassword) {
+    public FtpHelper(String ftpServer, int ftpPort, String ftpUsername,
+                     String ftpPassword) {
         super(ftpServer, ftpPort, ftpUsername, ftpPassword);
     }
 
@@ -39,23 +33,6 @@ public class FtpsHelper extends BaseFtpHelper<FTPClient>{
     public void connect(String ftpServer, int ftpPort, String ftpUsername, String ftpPassword) {
         ftp = new FTPClient();
         try {
-            TrustManager[] trustManager = new TrustManager[]{new X509TrustManager() {
-                public X509Certificate[] getAcceptedIssuers() {
-                    return null;
-                }
-                public void checkClientTrusted(X509Certificate[] certs,
-                                               String authType) {
-                }
-                public void checkServerTrusted(X509Certificate[] certs,
-                                               String authType) {
-                }
-            }};
-            SSLContext sslContext = null;
-            sslContext = SSLContext.getInstance("SSL");
-            sslContext.init(null, trustManager, new SecureRandom());
-            SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
-            ftp.setSSLSocketFactory(sslSocketFactory);
-            ftp.setSecurity(FTPClient.SECURITY_FTPES);
             ftp.connect(ftpServer, ftpPort);
             ftp.login(ftpUsername, ftpPassword);
             ftp.setCharset("UTF-8");
@@ -127,8 +104,8 @@ public class FtpsHelper extends BaseFtpHelper<FTPClient>{
      * @return s
      * @throws Exception
      */
-    public OutputStream downloadFile(String filePath) throws Exception {
-        OutputStream outputStream = new ByteArrayOutputStream();
+    public ByteArrayOutputStream downloadFile(String filePath) throws Exception {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         String fileName = "";
         filePath = StringUtils.removeStart(filePath, "/");
         int len = filePath.lastIndexOf("/");

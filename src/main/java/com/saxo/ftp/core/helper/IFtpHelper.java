@@ -1,6 +1,8 @@
-package com.itdl;
+package com.saxo.ftp.core.helper;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.InputStream;
 import java.io.OutputStream;
 
 /**
@@ -63,7 +65,7 @@ public interface IFtpHelper<T> {
      * @return 输出流（没有关闭，需要调用者自己关闭）
      * @throws Exception
      */
-    OutputStream downloadFile(String filePath) throws Exception;
+    ByteArrayOutputStream downloadFile(String filePath) throws Exception;
 
     /**
      * 上传文件
@@ -72,6 +74,8 @@ public interface IFtpHelper<T> {
      * @throws Exception
      */
     void uploadFile(File file, String filePath) throws Exception;
+
+    void uploadFile(InputStream inStream, String filePath) throws Exception;
 
     /**
      * 删除远程FTP文件

@@ -1,6 +1,10 @@
-package com.itdl;
+package com.saxo.ftp.core;
 
-import com.itdl.enums.FtpTypeEnum;
+import com.saxo.ftp.core.helper.BaseFtpHelper;
+import com.saxo.ftp.core.helper.FtpHelper;
+import com.saxo.ftp.core.helper.FtpsHelper;
+import com.saxo.ftp.core.helper.SftpHelper;
+import com.saxo.ftp.enums.FtpTypeEnum;
 
 /**
  * FTP对外工具类

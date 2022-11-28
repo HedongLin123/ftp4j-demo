@@ -1,9 +1,9 @@
-package com.itdl.test;
+package com.saxo.ftp.test;
 
 
-import com.itdl.BaseFtpHelper;
-import com.itdl.FtpUtil;
-import com.itdl.enums.FtpTypeEnum;
+import com.saxo.ftp.core.helper.BaseFtpHelper;
+import com.saxo.ftp.core.FtpUtil;
+import com.saxo.ftp.enums.FtpTypeEnum;
 
 import java.io.OutputStream;
 

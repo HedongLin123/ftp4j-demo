@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: common-ftp
+  cloud:
+    nacos:
+      config:
+        server-addr: ${nacos_server_add}
+        file-extension: yaml
+        namespace: ${nacos_namespace}
+        group: DEFAULT_GROUP
+        username: ${nacos_username}
+        password: ${nacos_password}
+      discovery:
+        server-addr: ${nacos_server_add}
+        namespace: ${nacos_namespace}
+        username: ${nacos_username}
+        password: ${nacos_password}
+
+
+
+

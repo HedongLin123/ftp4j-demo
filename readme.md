@@ -468,7 +468,7 @@ public class FtpHelper extends BaseFtpHelper<FTPClient>{
 ## 3.4、FTPS工具类实
 
 ```java
-import com.itdl.exception.FtpException;
+import FtpException;
 import it.sauronsoftware.ftp4j.FTPClient;
 import org.apache.commons.lang3.StringUtils;
 
@@ -483,7 +483,7 @@ import java.security.cert.X509Certificate;
 /**
  * Ftps 工具类
  */
-public class FtpsHelper extends BaseFtpHelper<FTPClient>{
+public class FtpsHelper extends BaseFtpHelper<FTPClient> {
     /**
      * 初始化Ftp信息
      *
@@ -511,9 +511,11 @@ public class FtpsHelper extends BaseFtpHelper<FTPClient>{
                 public X509Certificate[] getAcceptedIssuers() {
                     return null;
                 }
+
                 public void checkClientTrusted(X509Certificate[] certs,
                                                String authType) {
                 }
+
                 public void checkServerTrusted(X509Certificate[] certs,
                                                String authType) {
                 }
@@ -530,9 +532,8 @@ public class FtpsHelper extends BaseFtpHelper<FTPClient>{
             // 记录根目录
             this.rootPath = ftp.currentDirectory();
             System.out.println(this.rootPath);
-        }
-        catch (Exception e) {
-            ftp =  null;
+        } catch (Exception e) {
+            ftp = null;
             throw new FtpException(e.getMessage(), e.getCause());
         }
     }
@@ -559,9 +560,9 @@ public class FtpsHelper extends BaseFtpHelper<FTPClient>{
      * @param dir 目录名称
      * @return 子目录列表
      */
-    public String[] listDir(String dir){
+    public String[] listDir(String dir) {
         // 不是目录，则直接返回, 校验的同时会进入目录
-        if (!checkDirectory(dir)){
+        if (!checkDirectory(dir)) {
             return new String[]{};
         }
         // 查询目录下面有什么
@@ -611,7 +612,7 @@ public class FtpsHelper extends BaseFtpHelper<FTPClient>{
             String type = filePath.substring(0, len);
             String rootStart = rootPath;
             rootStart = StringUtils.removeStart(rootStart, "/");
-            if (type.startsWith(rootStart)){
+            if (type.startsWith(rootStart)) {
                 type = type.substring(rootStart.length() + 1);
             }
             String[] typeArray = type.split("/");
@@ -668,7 +669,7 @@ public class FtpsHelper extends BaseFtpHelper<FTPClient>{
             String type = filePath.substring(0, len);
             String rootStart = rootPath;
             rootStart = StringUtils.removeStart(rootStart, "/");
-            if (type.startsWith(rootStart)){
+            if (type.startsWith(rootStart)) {
                 type = type.substring(rootStart.length() + 1);
             }
             String[] typeArray = type.split("/");
@@ -734,7 +735,7 @@ public class FtpsHelper extends BaseFtpHelper<FTPClient>{
 ## 3.5、SFTP工具类实现
 
 ```java
-import com.itdl.exception.FtpException;
+import FtpException;
 import com.jcraft.jsch.*;
 import org.apache.commons.lang3.StringUtils;
 
@@ -745,7 +746,7 @@ import java.util.stream.Collectors;
 /**
  * SFTP 工具类
  */
-public class SftpHelper extends BaseFtpHelper<ChannelSftp>{
+public class SftpHelper extends BaseFtpHelper<ChannelSftp> {
     /**
      * 初始化Ftp信息
      *
@@ -774,25 +775,24 @@ public class SftpHelper extends BaseFtpHelper<ChannelSftp>{
             // 获取session
             Session session = jsch.getSession(ftpUsername, ftpServer, ftpPort);
             // 设置密码
-            if (!StringUtils.isEmpty(ftpPassword)){
+            if (!StringUtils.isEmpty(ftpPassword)) {
                 session.setPassword(ftpPassword);
             }
             Properties properties = new Properties();
             properties.put("StrictHostKeyChecking", "no");
             session.setConfig(properties);
             // 使用会话开启连接
-            if (!session.isConnected()){
+            if (!session.isConnected()) {
                 session.connect(30000);
             }
             Channel channel = session.openChannel("sftp");
-            if (!channel.isConnected()){
+            if (!channel.isConnected()) {
                 channel.connect(30000);
             }
             ftp = (ChannelSftp) channel;
             // 记录根目录
             this.rootPath = ftp.pwd();
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             ftp = null;
             throw new FtpException(e.getMessage(), e.getCause());
         }
@@ -822,9 +822,9 @@ public class SftpHelper extends BaseFtpHelper<ChannelSftp>{
      * @param dir 目录名称
      * @return 子目录列表
      */
-    public String[] listDir(String dir){
+    public String[] listDir(String dir) {
         // 不是目录，则直接返回, 校验的同时会进入目录
-        if (!checkDirectory(dir)){
+        if (!checkDirectory(dir)) {
             return new String[]{};
         }
         // 查询目录下面有什么
@@ -878,7 +878,7 @@ public class SftpHelper extends BaseFtpHelper<ChannelSftp>{
             String type = filePath.substring(0, len);
             String rootStart = rootPath;
             rootStart = StringUtils.removeStart(rootStart, "/");
-            if (type.startsWith(rootStart) && !rootPath.equals("/")){
+            if (type.startsWith(rootStart) && !rootPath.equals("/")) {
                 type = type.substring(rootStart.length() + 1);
             }
             String[] typeArray = type.split("/");
@@ -1047,9 +1047,9 @@ public class FtpUtil {
 ## 3.7、文件上传测试
 
 ```java
-import com.itdl.BaseFtpHelper;
-import com.itdl.FtpUtil;
-import com.itdl.enums.FtpTypeEnum;
+import BaseFtpHelper;
+import FtpUtil;
+import FtpTypeEnum;
 
 import java.io.File;
 
@@ -1083,9 +1083,9 @@ public class FtpUtilUploadTest {
 ## 3.8、文件下载测试
 
 ```java
-import com.itdl.BaseFtpHelper;
-import com.itdl.FtpUtil;
-import com.itdl.enums.FtpTypeEnum;
+import BaseFtpHelper;
+import FtpUtil;
+import FtpTypeEnum;
 
 import java.io.OutputStream;
 
@@ -1097,19 +1097,19 @@ public class FtpUtilDownloadTest {
     public static void main(String[] args) throws Exception {
         // 测试连接FTP
         final BaseFtpHelper<?> ftpHelper = FtpUtil.createFtpHelper(FtpTypeEnum.FTP, "FTP地址", 21, "账号", "密码");
-        try (final OutputStream outputStream = ftpHelper.downloadFile("文件绝对路径")){
+        try (final OutputStream outputStream = ftpHelper.downloadFile("文件绝对路径")) {
             System.out.println(outputStream.toString().length());
         }
 
         // 测试连接FTPS
         final BaseFtpHelper<?> ftpsHelper = FtpUtil.createFtpHelper(FtpTypeEnum.FTPS, "FTPS地址", 21, "账号", "密码");
-        try (final OutputStream outputStream = ftpsHelper.downloadFile("文件绝对路径")){
+        try (final OutputStream outputStream = ftpsHelper.downloadFile("文件绝对路径")) {
             System.out.println(outputStream.toString().length());
         }
 
         // 测试连接SFTP
         final BaseFtpHelper<?> sftpHelper = FtpUtil.createFtpHelper(FtpTypeEnum.SFTP, "SFTP地址", 22, "账号", "密码");
-        try (final OutputStream outputStream = sftpHelper.downloadFile("文件绝对路径")){
+        try (final OutputStream outputStream = sftpHelper.downloadFile("文件绝对路径")) {
             System.out.println(outputStream.toString().length());
         }
 

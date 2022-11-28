@@ -1,4 +1,4 @@
-package com.itdl;
+package com.saxo.ftp.core.helper;
 import org.apache.commons.lang3.StringUtils;
 /**
  * Ftp 工具类 基础父类

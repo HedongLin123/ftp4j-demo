@@ -1,15 +1,17 @@
-package com.itdl;
+package com.saxo.ftp.core.helper;
 
-import com.itdl.exception.FtpException;
-import it.sauronsoftware.ftp4j.FTPClient;
+import com.saxo.ftp.exception.FtpException;
+import com.jcraft.jsch.*;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.*;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
- * Ftp 工具类
+ * SFTP 工具类
  */
-public class FtpHelper extends BaseFtpHelper<FTPClient>{
+public class SftpHelper extends BaseFtpHelper<ChannelSftp>{
     /**
      * 初始化Ftp信息
      *
@@ -18,45 +20,63 @@ public class FtpHelper extends BaseFtpHelper<FTPClient>{
      * @param ftpUsername ftp 用户名
      * @param ftpPassword ftp 密码
      */
-    public FtpHelper(String ftpServer, int ftpPort, String ftpUsername,
-                     String ftpPassword) {
+    public SftpHelper(String ftpServer, int ftpPort, String ftpUsername,
+                      String ftpPassword) {
         super(ftpServer, ftpPort, ftpUsername, ftpPassword);
     }
 
     /**
      * 连接到ftp
+     *
      * @param ftpServer   ftp服务器地址
      * @param ftpPort     Ftp端口号
      * @param ftpUsername ftp 用户名
      * @param ftpPassword ftp 密码
      */
     public void connect(String ftpServer, int ftpPort, String ftpUsername, String ftpPassword) {
-        ftp = new FTPClient();
+        ftp = new ChannelSftp();
         try {
-            ftp.connect(ftpServer, ftpPort);
-            ftp.login(ftpUsername, ftpPassword);
-            ftp.setCharset("UTF-8");
+            JSch jsch = new JSch();
+            // 获取session
+            Session session = jsch.getSession(ftpUsername, ftpServer, ftpPort);
+            // 设置密码
+            if (!StringUtils.isEmpty(ftpPassword)){
+                session.setPassword(ftpPassword);
+            }
+            Properties properties = new Properties();
+            properties.put("StrictHostKeyChecking", "no");
+            session.setConfig(properties);
+            // 使用会话开启连接
+            if (!session.isConnected()){
+                session.connect(30000);
+            }
+            Channel channel = session.openChannel("sftp");
+            if (!channel.isConnected()){
+                channel.connect(30000);
+            }
+            ftp = (ChannelSftp) channel;
             // 记录根目录
-            this.rootPath = ftp.currentDirectory();
-            System.out.println(this.rootPath);
+            this.rootPath = ftp.pwd();
         }
         catch (Exception e) {
-            ftp =  null;
+            ftp = null;
             throw new FtpException(e.getMessage(), e.getCause());
         }
     }
 
     /**
      * 更改ftp路径
+     *
      * @param dirName
      * @return
      */
     public boolean checkDirectory(String dirName) {
         boolean flag;
         try {
-            ftp.changeDirectory(dirName);
+            ftp.cd(dirName);
             flag = true;
         } catch (Exception e) {
+            e.printStackTrace();
             flag = false;
         }
         return flag;
@@ -76,7 +96,9 @@ public class FtpHelper extends BaseFtpHelper<FTPClient>{
         // 查询目录下面有什么
         String[] dirs = new String[]{};
         try {
-            dirs = ftp.listNames();
+            final Vector<ChannelSftp.LsEntry> result = (Vector<ChannelSftp.LsEntry>) ftp.ls(dir);
+            // 转换为string数组
+            return result.stream().map(ChannelSftp.LsEntry::getFilename).collect(Collectors.toList()).toArray(new String[]{});
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -90,7 +112,9 @@ public class FtpHelper extends BaseFtpHelper<FTPClient>{
     public void disconnect() {
         try {
             if (ftp.isConnected()) {
-                ftp.disconnect(true);
+                ftp.getSession().disconnect();
+                ftp.disconnect();
+                ftp.quit();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -104,8 +128,8 @@ public class FtpHelper extends BaseFtpHelper<FTPClient>{
      * @return s
      * @throws Exception
      */
-    public OutputStream downloadFile(String filePath) throws Exception {
-        OutputStream outputStream = new ByteArrayOutputStream();
+    public ByteArrayOutputStream downloadFile(String filePath) throws Exception {
+        InputStream inputStream = null;
         String fileName = "";
         filePath = StringUtils.removeStart(filePath, "/");
         int len = filePath.lastIndexOf("/");
@@ -120,23 +144,30 @@ public class FtpHelper extends BaseFtpHelper<FTPClient>{
             String type = filePath.substring(0, len);
             String rootStart = rootPath;
             rootStart = StringUtils.removeStart(rootStart, "/");
-            if (type.startsWith(rootStart)){
+            if (type.startsWith(rootStart) && !rootPath.equals("/")){
                 type = type.substring(rootStart.length() + 1);
             }
             String[] typeArray = type.split("/");
             // 先切换到根目录，预防出错
-            ftp.changeDirectory(rootPath);
+            ftp.cd(rootPath);
             for (String s : typeArray) {
-                ftp.changeDirectory(s);
+                ftp.cd(s);
             }
         }
         try {
-            final String pwd = ftp.currentDirectory();
-            ftp.download(fileName, outputStream, 0, null);
+            final String pwd = ftp.pwd();
+            inputStream = ftp.get(fileName);
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();//输出流
+            byte[] bytes = new byte[1024];
+            int outlen;
+            while ((outlen = inputStream.read(bytes)) != -1) {
+                outputStream.write(bytes, 0, outlen); //将读到的字节写入输出流
+            }
+            return outputStream;
         } catch (Exception e) {
             e.printStackTrace();
+            throw new RuntimeException("download file fail");
         }
-        return outputStream;
     }
 
     /**
@@ -175,21 +206,14 @@ public class FtpHelper extends BaseFtpHelper<FTPClient>{
         } else {
             fileName = filePath.substring(len + 1);
             String type = filePath.substring(0, len);
-            String rootStart = rootPath;
-            rootStart = StringUtils.removeStart(rootStart, "/");
-            if (type.startsWith(rootStart)){
-                type = type.substring(rootStart.length() + 1);
-            }
             String[] typeArray = type.split("/");
-            // 先切换到根目录，预防出错
-            ftp.changeDirectory(rootPath);
             for (String s : typeArray) {
                 if (!checkDirectory(s)) {
-                    ftp.createDirectory(s);
+                    ftp.mkdir(s);
                 }
             }
         }
-        ftp.upload(fileName, inStream, 0, 0, null);
+        ftp.put(inStream, fileName);
     }
 
     /**
@@ -215,11 +239,11 @@ public class FtpHelper extends BaseFtpHelper<FTPClient>{
             String[] typeArray = type.split("/");
             for (String s : typeArray) {
                 if (checkDirectory(s)) {
-                    ftp.changeDirectory(s);
+                    ftp.cd(s);
                 }
             }
         }
-        ftp.deleteFile(fileName);
+        ftp.rm(fileName);
     }
 
     /**
@@ -231,7 +255,7 @@ public class FtpHelper extends BaseFtpHelper<FTPClient>{
     public void changeDirectory(String path) {
         if (!StringUtils.isEmpty(path)) {
             try {
-                ftp.changeDirectory(path);
+                ftp.cd(path);
             } catch (Exception e) {
                 e.printStackTrace();
             }
