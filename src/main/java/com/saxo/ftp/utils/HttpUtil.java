@@ -1,5 +1,7 @@
 package com.saxo.ftp.utils;
 
+import org.apache.commons.lang3.StringUtils;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedInputStream;
@@ -57,4 +59,31 @@ public class HttpUtil {
         }
     }
 
+
+    /**
+     * 将文件路径替换为一个正确的路径 windows不处理
+     * @param path 文件路径
+     * @return
+     */
+    public static String replaceFilePath(String path){
+        if (StringUtils.isBlank(path)){
+            return "";
+        }
+
+        if (path.trim().equals("/")){
+            return path.trim();
+        }
+
+        // 反斜杠转正  双正斜杠去重
+        path = path.replace("\\\\", "/");
+        while (path.contains("//")){
+            path = path.replace("//", "/");
+        }
+
+        if (path.endsWith("/")){
+            return path.substring(0, path.length() - 1);
+        }
+
+        return path;
+    }
 }
